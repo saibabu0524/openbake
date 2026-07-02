@@ -1,72 +1,21 @@
 import type { NextConfig } from "next";
 
-const isDev = process.env.NODE_ENV === "development";
-
-const securityHeaders = [
-  { key: "X-DNS-Prefetch-Control", value: "on" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
-  {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed by Next.js dev & Framer Motion
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://images.unsplash.com https://res.cloudinary.com https://*",
-      [
-        "connect-src 'self'",
-        process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
-        // Allow any ngrok tunnel (local dev + staging)
-        "https://*.ngrok-free.app",
-        "https://*.ngrok.io",
-        // Allow Vercel backends
-        "https://*.vercel.app",
-        "https://openbakebackenda.vercel.app"
-      ].join(" "),
-      "frame-ancestors 'none'",
-    ].join("; "),
-  },
-];
-
 const nextConfig: NextConfig = {
   // Fail the build on TS errors in CI
   typescript: { ignoreBuildErrors: false },
 
-  images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "res.cloudinary.com" },
-      // Allow any https image — tighten to specific domains in production
-      { protocol: "https", hostname: "**" },
-    ],
-  },
+  // Static export — the output is embedded into the Spring Boot jar and
+  // served as static files from the same origin as the API, so next/image's
+  // server-side optimization pipeline (which needs a Node server) isn't
+  // available; images are served as-is via the Cloudinary/Unsplash URLs
+  // already baked into the product data.
+  images: { unoptimized: true },
 
-  async headers() {
-    // Don't register the route at all in dev (empty headers array is invalid in Next.js)
-    if (isDev) return [];
-    return [
-      {
-        source: "/(.*)",
-        headers: securityHeaders,
-      },
-    ];
-  },
+  output: "export",
 
-  // Enable standalone output for Docker deployments
-  output: "standalone",
-
-  // Compress responses
-  compress: true,
-
-  // Clickjacking protection via header (redundant with X-Frame-Options but belt-and-suspenders)
-  poweredByHeader: false,
+  // Security headers (CSP, X-Frame-Options, etc.) moved to the Spring Boot
+  // server — the headers() config option isn't supported for static export
+  // since there's no Next.js server to apply them at request time.
 };
 
 export default nextConfig;

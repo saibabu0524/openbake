@@ -19,7 +19,14 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "BASE_URL", "\"https://23f7-2402-e280-213a-15c-3ce7-ff21-eba8-b00e.ngrok-free.app/api/\"")
+        // Points at the unified Spring Boot server (server/) instead of the old
+        // Python/FastAPI backend. 10.0.2.2 is the Android emulator's alias for
+        // the host machine's localhost — override via -PapiBaseUrl=... (or edit
+        // directly) for a physical device on the same LAN (http://<host-LAN-ip>:8080/api/)
+        // or a real deployed domain.
+        val apiBaseUrl = (project.findProperty("apiBaseUrl") as String?)
+            ?: "http://10.0.2.2:8080/api/"
+        buildConfigField("String", "BASE_URL", "\"$apiBaseUrl\"")
     }
 
     buildTypes {

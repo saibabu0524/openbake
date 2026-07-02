@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# .env.production only sets the public API base path for the static export
+# build baked into the Spring Boot jar — no secrets, safe to commit.
+!.env.production
 
 # vercel
 .vercel

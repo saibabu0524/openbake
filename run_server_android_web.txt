@@ -1,4 +1,4 @@
-pkill -f "uvicorn app.main"; pkill -f "next dev"; pkill -f "ngrok http"
+pkill -f "spring-boot:run"; pkill -f "ngrok http"
 
 cd /Users/saibabu/Documents/openbake && ./run_all.sh --android
 
@@ -6,17 +6,12 @@ cd /Users/saibabu/Documents/openbake && ./run_all.sh --android
 cd /Users/saibabu/Documents/openbake && ./run_all.sh
 
 
-pkill -f "uvicorn app.main"
-cd /Users/saibabu/Documents/openbake/backend
-/Users/saibabu/Documents/openbake/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-
-pkill -f "next dev"
-cd /Users/saibabu/Documents/openbake/web && npm run dev
+pkill -f "spring-boot:run"
+cd /Users/saibabu/Documents/openbake/server
+mvn spring-boot:run
 
 
 
-logs 
-tail -f /tmp/openbake_backend.log   # backend
-tail -f /tmp/openbake_web.log       # web
+logs
+tail -f /tmp/openbake_server.log    # server (API + embedded web app)
 tail -f /tmp/openbake_ngrok.log     # ngrok

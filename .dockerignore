@@ -1,0 +1,16 @@
+# server/Dockerfile's build context is the repo root (needs ../web available
+# to the Maven build), so this keeps that context small.
+.git/
+android/
+*.md
+*.png
+*.jpeg
+*.jpg
+
+server/target/
+server/.mvn/wrapper/maven-wrapper.jar
+
+web/node/
+web/node_modules/
+web/.next/
+web/out/

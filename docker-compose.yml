@@ -1,97 +1,68 @@
-version: "3.9"
-
 # ─────────────────────────────────────────────────────────────────────────────
 # OpenBake — production docker-compose
-# Copy .env.example → .env and fill in values before running.
+# Copy server/.env.example → server/.env and fill in values before running.
+#
+# Note: server/.env is loaded into the `server` container via env_file, but the
+# ${MYSQL_*} references below (used for both the `db` service and to build the
+# server's DATABASE_URL) are resolved by Compose itself from the shell
+# environment or a root-level .env file — not from server/.env. Export them or
+# add a root .env with the same MYSQL_* values if you change them from the
+# defaults.
+#
 # Usage: docker compose up -d
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
 
-  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  # ── MySQL ──────────────────────────────────────────────────────────────────
   db:
-    image: postgres:16-alpine
+    image: mysql:8.0
     container_name: openbake-db
     restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-bakery_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bakery_pass}
-      POSTGRES_DB: ${POSTGRES_DB:-bakery_db}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_change_me}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-openbake}
+      MYSQL_USER: ${MYSQL_USER:-bakery_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-bakery_pass}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - dbdata:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bakery_user}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root_change_me}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - internal
 
-  # ── Redis ──────────────────────────────────────────────────────────────────
-  redis:
-    image: redis:7-alpine
-    container_name: openbake-redis
-    restart: unless-stopped
-    command: redis-server --save 60 1 --loglevel warning
-    volumes:
-      - redisdata:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    networks:
-      - internal
-
-  # ── FastAPI backend ────────────────────────────────────────────────────────
-  backend:
+  # ── Spring Boot server (API + embedded web app) ───────────────────────────────
+  server:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: openbake-backend
+      # Build context is the repo root — the Maven build embeds ../web's static
+      # export into the jar (see server/pom.xml's build-web profile).
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: openbake-server
     restart: unless-stopped
-    env_file: ./backend/.env
+    env_file: ./server/.env
     environment:
       APP_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-bakery_user}:${POSTGRES_PASSWORD:-bakery_pass}@db:5432/${POSTGRES_DB:-bakery_db}
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-openbake}?useSSL=false&allowPublicKeyRetrieval=true
+      DATABASE_USERNAME: ${MYSQL_USER:-bakery_user}
+      DATABASE_PASSWORD: ${MYSQL_PASSWORD:-bakery_pass}
+    volumes:
+      - mediadata:/app/media
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-    networks:
-      - internal
-      - public
-
-  # ── Next.js frontend ───────────────────────────────────────────────────────
-  web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.openbake.in/api}
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://openbake.in}
-    container_name: openbake-web
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
     networks:
+      - internal
       - public
 
   # ── Nginx reverse proxy ────────────────────────────────────────────────────
@@ -106,14 +77,13 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
-      - web
-      - backend
+      - server
     networks:
       - public
 
 volumes:
-  pgdata:
-  redisdata:
+  dbdata:
+  mediadata:
 
 networks:
   internal:

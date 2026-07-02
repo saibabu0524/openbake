@@ -1,0 +1,88 @@
+app:
+  env: ${APP_ENV:development}
+  secret-key: ${SECRET_KEY:change-this-to-a-long-random-secret-in-production}
+  algorithm: ${ALGORITHM:HS256}
+  access-token-expire-minutes: ${ACCESS_TOKEN_EXPIRE_MINUTES:15}
+  refresh-token-expire-days: ${REFRESH_TOKEN_EXPIRE_DAYS:30}
+  allowed-origins: ${ALLOWED_ORIGINS:*}
+
+  firebase-credentials-path: ${FIREBASE_CREDENTIALS_PATH:./firebase-credentials.json}
+  media-dir: ${MEDIA_DIR:./media}
+
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
+
+  payu:
+    merchant-key: ${PAYU_MERCHANT_KEY:PgFuTw}
+    merchant-salt: ${PAYU_MERCHANT_SALT:vVRWH3BsZiAezWr1xEsFHvdcs9zf6m2j}
+    client-id: ${PAYU_CLIENT_ID:}
+    client-secret: ${PAYU_CLIENT_SECRET:}
+    payment-url: ${PAYU_PAYMENT_URL:https://test.payu.in/_payment}
+    status-api-url: ${PAYU_STATUS_API_URL:https://test.payu.in/merchant/postservice?form=2}
+    callback-base-url: ${PAYU_CALLBACK_BASE_URL:}
+
+  web-base-url: ${WEB_BASE_URL:http://localhost:3000}
+  android-deep-link-base: ${ANDROID_DEEP_LINK_BASE:openbake://payment-result}
+
+  delivery:
+    bakery-lat: ${BAKERY_LAT:12.9716}
+    bakery-lng: ${BAKERY_LNG:77.5946}
+    free-delivery-radius-km: ${FREE_DELIVERY_RADIUS_KM:5.0}
+    delivery-fee-default: ${DELIVERY_FEE_DEFAULT:40.0}
+    free-delivery-order-value: ${FREE_DELIVERY_ORDER_VALUE:500.0}
+
+  admin:
+    email: ${ADMIN_EMAIL:admin@srivinayakabakery.in}
+    password: ${ADMIN_PASSWORD:Admin@1234}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: openbake-server
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/openbake?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DATABASE_USERNAME:root}
+    password: ${DATABASE_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: openbake-pool
+      maximum-pool-size: 10
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: false
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  jackson:
+    default-property-inclusion: non_null
+
+logging:
+  level:
+    root: INFO
+    com.openbake.server: ${LOG_LEVEL:INFO}
+
+springdoc:
+  api-docs:
+    path: /openapi.json
+  swagger-ui:
+    path: /docs
