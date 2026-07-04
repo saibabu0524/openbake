@@ -1,0 +1,10 @@
+target/
+subscribers.csv
+*.log
+
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
